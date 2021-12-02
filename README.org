@@ -1,0 +1,6 @@
+#+title: Readme
+#+author: Ellis Kenyő
+#+date: 2021-12-02
+#+latex_class: chameleon
+
+Simply just a list of all my [[https://adventofcode.com/][Advent of Code]] answers done in F#. This will likely expand to include other languages, but that's my favourite.
