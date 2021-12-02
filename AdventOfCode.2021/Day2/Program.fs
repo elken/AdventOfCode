@@ -2,55 +2,62 @@ module Day2
 
 open System.IO
 
-type Depth =
+type SubmarineInput =
+    | Forward of int
+    | Down of int
+    | Up of int
+
+type SubmarinePosition =
     { HorizontalPosition: int
       VerticalPosition: int
       Aim: int }
 
-let tailToAmount (tail: string list) = tail.[0] |> int
+let initialState =
+    { HorizontalPosition = 0
+      VerticalPosition = 0
+      Aim = 0 }
 
-let calculateDepth depth direction =
-    match direction with
-    | "forward" :: amt -> { depth with HorizontalPosition = depth.HorizontalPosition + (amt |> tailToAmount) }
-    | "down" :: amt -> { depth with VerticalPosition = depth.VerticalPosition + (amt |> tailToAmount) }
-    | "up" :: amt -> { depth with VerticalPosition = depth.VerticalPosition - (amt |> tailToAmount) }
-    | _ -> depth
+let parseDirection (line: string) =
+    let tokens = line.Split(" ")
 
-let dive input =
+    let command =
+        match tokens.[0] with
+        | "forward" -> Some Forward
+        | "down" -> Some Down
+        | "up" -> Some Up
+        | _ -> None
+
+    command.Value(tokens.[1] |> int)
+
+let calculateDepth position command =
+    match command with
+    | Forward amount -> { position with HorizontalPosition = position.HorizontalPosition + amount }
+    | Down amount -> { position with VerticalPosition = position.VerticalPosition + amount }
+    | Up amount -> { position with VerticalPosition = position.VerticalPosition - amount }
+
+let calculateAim position command =
+    match command with
+    | Forward amount ->
+        { position with
+            HorizontalPosition = position.HorizontalPosition + amount
+            VerticalPosition = position.VerticalPosition + position.Aim * amount }
+    | Down amount -> { position with Aim = position.Aim + amount }
+    | Up amount -> { position with Aim = position.Aim - amount }
+
+let applyInputs calculate input =
     input
-    |> Seq.fold
-        calculateDepth
-        { HorizontalPosition = 0
-          VerticalPosition = 0
-          Aim = 0 }
+    |> Seq.fold calculate initialState
     |> (fun depth -> depth.HorizontalPosition * depth.VerticalPosition)
 
-let calculateAim depth direction =
-    match direction with
-    | "forward" :: amt ->
-        { depth with
-            HorizontalPosition = depth.HorizontalPosition + (amt |> tailToAmount)
-            VerticalPosition =
-                depth.VerticalPosition
-                + depth.Aim * (amt |> tailToAmount) }
-    | "down" :: amt -> { depth with Aim = depth.Aim + (amt |> tailToAmount) }
-    | "up" :: amt -> { depth with Aim = depth.Aim - (amt |> tailToAmount) }
-    | _ -> depth
+let dive = applyInputs calculateDepth
 
-let aim input =
-    input
-    |> Seq.fold
-        calculateAim
-        { HorizontalPosition = 0
-          VerticalPosition = 0
-          Aim = 0 }
-    |> (fun depth -> depth.HorizontalPosition * depth.VerticalPosition)
+let aim = applyInputs calculateAim
 
 [<EntryPoint>]
 let main argv =
     let input =
         File.ReadAllLines "input"
-        |> Seq.map (fun s -> List.ofArray (s.Split ' '))
+        |> Seq.map parseDirection
 
     let part1 = dive input
     let part2 = aim input
