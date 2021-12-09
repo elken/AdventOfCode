@@ -5,7 +5,7 @@ open System.IO
 
 let triangularNumber n = n * (n + 1) / 2
 
-let calculateDistance mapper input = input |> Seq.map mapper |> Seq.sum
+let calculateDistance mapper = (Seq.map mapper >> Seq.sum)
 
 let input =
     File.ReadAllText $"{__SOURCE_DIRECTORY__}/input"
