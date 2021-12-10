@@ -50,19 +50,15 @@ let computeScore offender =
     | '>' -> 25137
     | _ -> failwith "Invalid offender"
 
-let flipOffenders offenders =
-    offenders |> List.map (fun s -> pairs.[s])
-
 let part1 =
     parseInput
     |> Array.choose getOffendersNoStack
-    |> Array.map (fun s -> s.[0])
-    |> Array.map computeScore
+    |> Array.map (List.item 0 >> computeScore)
     |> Array.sum
 
 let countMissing line =
     line
-    |> List.fold (fun acc o -> (acc * 5L) + (computeScore o |> int64)) 0L
+    |> List.fold (fun acc o -> (acc * 5) + (computeScore o)) 0
 
 let part2 =
     parseInput
