@@ -1,26 +1,19 @@
-[<AutoOpen>]
-module Day1
-
-open System.IO
-
 let hasDepthIncrease pair = fst pair < snd pair
 
-let sonarSweep input =
+let input =
+    System.IO.File.ReadAllLines $"{__SOURCE_DIRECTORY__}/input"
+    |> Seq.map int
+
+let part1 input =
     input
     |> Seq.pairwise
     |> Seq.filter hasDepthIncrease
     |> Seq.length
 
-let sonarSweepGrouped input =
+let part2 input =
     input
     |> Seq.windowed 3
     |> Seq.map Seq.sum
-    |> sonarSweep
+    |> part1
 
-let input =
-    File.ReadAllLines $"{__SOURCE_DIRECTORY__}/input"
-    |> Seq.map int
-
-let part1 = sonarSweep input
-let part2 = sonarSweepGrouped input
-printfn "%A" (part1, part2)
+printfn "%A" (part1 input, part2 input)

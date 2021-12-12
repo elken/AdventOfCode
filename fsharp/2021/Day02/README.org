@@ -1,70 +1,98 @@
-#+title: Readme
+#+title: Day 2: Dive!
 #+author: Ellis Kenyő
 #+date: 2021-12-02
 #+latex_class: chameleon
 
+[[[https://adventofcode.com/2021/day/2][Problem description]]]
 
-* Day 2: Dive!
+* Part One
+Slightly more complex than Day 1 (/funny that/), but this is screaming to be
+solved using [[https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/active-patterns][Active Patterns]] and [[https://docs.microsoft.com/en-us/dotnet/fsharp/language-reference/records][Records]].
 
-** Part 1
+First thing we need ,before we even parse the input this time, is to define a
+Record to house the Submarine state (this could just be a three element tuple
+(threeple?) but I opted for readability)
 
-Now, you need to figure out how to pilot this thing.
-
-It seems like the submarine can take a series of commands like =forward 1=, =down= 2, or =up= 3:
-
-    - =forward X= increases the horizontal position by =X= units.
-    - =down= X increases the depth by =X= units.
-    - =up X= decreases the depth by =X= units.
-
-Note that since you're on a submarine, down and up affect your depth, and so they have the opposite result of what you might expect.
-
-The submarine seems to already have a planned course (your puzzle input). You should probably figure out where it's going. For example:
-
-#+begin_src
-forward 5
-down 5
-forward 8
-up 3
-down 8
-forward 2
+#+begin_src fsharp
+type SubmarinePosition =
+    { HorizontalPosition: int
+      Depth: int
+      Aim: int }
 #+end_src
 
-Your horizontal position and depth both start at =0=. The steps above would then modify them as follows:
+And let's define an Active Pattern to parse the commands (assumptions are made
+that anything that isn't a =Forward= or =Down= must be an =Up=, fits the domain but is
+technically incorrect)
 
-    - =forward 5= adds =5= to your horizontal position, a total of =5=.
-    - =down 5= adds =5= to your depth, resulting in a value of =5=.
-    - =forward 8= adds =8= to your horizontal position, a total of =13=.
-    - =up 3= decreases your depth by =3=, resulting in a value of =2=.
-    - =down 8= adds =8= to your depth, resulting in a value of =10=.
-    - =forward 2= adds =2= to your horizontal position, a total of =15=.
+#+begin_src fsharp
+let (|Forward|Down|Up|) (line: string) =
+    match line.Split(" ") with
+    | [| command; amount |] ->
+        if command = "forward" then
+            Forward(amount |> int)
+        elif command = "down" then
+            Down(amount |> int)
+        else
+            Up(amount |> int)
+    | _ -> failwith "Invalid line"
+#+end_src
 
-After following these instructions, you would have a horizontal position of =15= and a depth of =10=. (Multiplying these together produces =150=.)
+/Now/ we can parse the input (this time we only have to read the lines because
+we do the parsing in the pattern)
 
-Calculate the horizontal position and depth you would have after following the planned course. What do you get if you multiply your final horizontal position by your final depth?
+#+begin_src fsharp
+let input =
+    System.IO.File.ReadAllLines $"{__SOURCE_DIRECTORY__}/input"
+#+end_src
 
-**  Part Two
+Now the meat of the solution can begin. Both parts can be abstracted with
+pluggable bevaviour, so let's create that one first. The crux of the solution is
+we take the input, fold some defined calculate method on it and return
+horizontal position * depth.
 
-Based on your calculations, the planned course doesn't seem to make any sense. You find the submarine manual and discover that the process is actually slightly more complicated.
+#+begin_src fsharp
+let applyInputs calculate input =
+    input
+    |> Seq.fold
+        calculate
+        { HorizontalPosition = 0
+          Depth = 0
+          Aim = 0 }
+    |> (fun position -> position.HorizontalPosition * position.Depth)
+#+end_src
 
-In addition to horizontal position and depth, you'll also need to track a third value, aim, which also starts at =0=. The commands also mean something entirely different than you first thought:
+For part 1, all we need to do is:
 
-    - =down X= increases your aim by =X= units.
-    - =up X= decreases your aim by =X= units.
-    - =forward X= does two things:
-        - It increases your horizontal position by =X= units.
-        - It increases your depth by your aim multiplied by =X=.
+- If we have =Forward= then increase horizontal position by the amount
+- If we have =Down= then increase depth by that amount
+- If we have =Up= then decrease depth by that amount
 
-Again note that since you're on a submarine, down and up do the opposite of what you might expect: "down" means aiming in the positive direction.
+#+begin_src fsharp
+let calculateDepth position command =
+    match command with
+    | Forward amount -> { position with HorizontalPosition = position.HorizontalPosition + amount }
+    | Down amount -> { position with Depth = position.Depth + amount }
+    | Up amount -> { position with Depth = position.Depth - amount }
+#+end_src
 
-Now, the above example does something different:
+#+html: <details><summary>My answer</summary>2036120</details>
 
-    - =forward 5= adds =5= to your horizontal position, a total of =5=. Because your aim is =0=, your depth does not change.
-    - =down 5= adds =5= to your aim, resulting in a value of =5=.
-    - =forward 8= adds =8= to your horizontal position, a total of =13=. Because your aim is =5=, your depth increases by =8*5=40=.
-    - =up 3= decreases your aim by =3=, resulting in a value of =2=.
-    - =down 8= adds =8= to your aim, resulting in a value of =10=.
-    - =forward 2= adds =2= to your horizontal position, a total of =15=. Because your aim is =10=, your depth increases by =2*10=20= to a total of =60=.
+*  Part Two
+For part 2, we have to incorporate the Aim field in the calculations thusly:
 
-After following these new instructions, you would have a horizontal position of =15= and a depth of =60=. (Multiplying these produces =900=.)
+- If we have =Forward= then increase horizontal position by the amount and depth by aim * the amount
+- If we have =Down= then increase aim by that amount
+- If we have =Up= then decrease aim by that amount
 
-Using this new interpretation of the commands, calculate the horizontal position and depth you would have after following the planned course. What do you get if you multiply your final horizontal position by your final depth?
+#+begin_src fsharp
+let calculateAim position command =
+    match command with
+    | Forward amount ->
+        { position with
+            HorizontalPosition = position.HorizontalPosition + amount
+            Depth = position.Depth + position.Aim * amount }
+    | Down amount -> { position with Aim = position.Aim + amount }
+    | Up amount -> { position with Aim = position.Aim - amount }
+#+end_src
+
+#+html: <details><summary>My answer</summary>2015547716/details>
