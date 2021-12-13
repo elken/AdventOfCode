@@ -1,0 +1,170 @@
+#+title: Day 13: Transparent Origami
+#+author: Ellis Kenyő
+#+date: 2021-12-13
+#+latex_class: chameleon
+
+[[[https://adventofcode.com/2021/day/13][Problem description]]]
+
+* Part One
+Nice and simple for a Monday morning, we're given an input that looks like
+
+#+begin_src
+6,10
+0,14
+9,10
+0,3
+10,4
+4,11
+6,0
+6,12
+4,1
+0,13
+10,12
+3,4
+3,0
+8,4
+1,10
+2,14
+8,10
+9,0
+
+fold along y=7
+fold along x=5
+#+end_src
+
+Where the first block is a list of co-ordinates to map, and the second block are
+instructions on how to fold the paper.
+
+The points map to a grid, so for example the above would map to:
+
+#+begin_src
+...#..#..#.
+....#......
+...........
+#..........
+...#....#.#
+...........
+...........
+...........
+...........
+...........
+.#....#.##.
+....#......
+......#...#
+#..........
+#.#........
+#+end_src
+
+Now, we have to use the instructions block to plot a line, and then "fold" the
+paper along that line and translate the points below the line. Any points that
+already exist don't get added twice (this suggests we're going to use a =Set=)
+
+Firstly, let's sensisbly parse the input. Because we don't know how many
+instructions there will be, we have to take lines until we hit a blank one, and
+then the only lines left should be our instructions.
+
+#+begin_src fsharp
+let parseInput =
+    let lines =
+        File.ReadAllLines $"{__SOURCE_DIRECTORY__}/input"
+
+    let coordLines = lines |> Array.takeWhile ((<>) "")
+
+    let foldLines =
+        lines
+        |> Array.skip (1 + Array.length coordLines)
+#+end_src
+
+Next we need to take the co-ordinate lines and get them into a =Set<int * int>= (a
+Set of tuples of two ints) & we need to take the fold lines and get them into a
+=[]<string * int>= (An array of tuples of a string and an int) and return them as
+a tuple.
+
+#+begin_src fsharp
+    let coords =
+        coordLines
+        |> Array.map (fun s ->
+            let tokens = s.Split(",")
+            (tokens.[0] |> int, tokens.[1] |> int))
+        |> Set.ofArray
+
+    let folds =
+        foldLines
+        |> Array.map (fun (s: string) ->
+            let tokens = s.Substring(11).Split("=")
+            (tokens.[0], tokens.[1] |> int))
+
+    (folds, coords)
+#+end_src
+
+Next we need a function to perform the folding, given a direction and the
+co-ordinates correctly translate them.
+
+#+begin_src fsharp
+let fold direction coords =
+    Set.map
+        (fun (x, y) ->
+            match direction with
+            | "x", n when n < x -> (n - (x - n), y)
+            | "y", n when n < y -> (x, n - (y - n))
+            | _ -> (x, y))
+        coords
+#+end_src
+
+We have everything we need, we can now just destructure the =parseInput= output
+and apply the first fold direction.
+
+#+begin_src fsharp
+let (folds, coords) = parseInput
+let part1 = coords |> (fold folds.[0]) |> Set.count
+#+end_src
+
+#+html: <details><summary>My answer</summary>712</details>
+
+* Part Two
+The next part is the logical step up from "only do the first fold"; do all of
+the folds. Because of how we designed our fold function, nothing has to change.
+We can just fold the coords and fold instructions together, however the output
+is meant to be human-readable letters (honestly this puzzle is one of the more
+impressive puzzles).
+
+So we first apply all of the fold instructions, and then we need a function to
+create human-readable output.
+
+#+begin_src fsharp
+let output coords =
+    let maxX = coords |> Seq.map fst |> Seq.max
+    let maxY = coords |> Seq.map snd |> Seq.max
+
+    [ for y in 0 .. maxY do
+          [ for x in 0 .. maxX ->
+                if coords |> Set.contains (x, y) then
+                    "#"
+                else
+                    "." ] ]
+
+let part2 =
+    folds
+    |> Seq.fold (fun acc n -> fold n acc) coords
+    |> output
+    |> List.map (String.concat "")
+#+end_src
+
+Now all that's left is to print the answers
+
+#+begin_src fsharp
+printfn "%A" (part1, part2)
+#+end_src
+
+#+html: <details><summary>My answer</summary>
+#+begin_src
+["###..#....#..#.####...##.###....##.####";
+ "#..#.#....#..#.#.......#.#..#....#.#...";
+ "###..#....####.###.....#.#..#....#.###.";
+ "#..#.#....#..#.#.......#.###.....#.#...";
+ "#..#.#....#..#.#....#..#.#....#..#.#...";
+ "###..####.#..#.#.....##..#.....##..#..."]
+#+end_src
+
+=BLHFJPJF=
+#+html:</details>
